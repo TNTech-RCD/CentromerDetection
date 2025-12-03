@@ -1,4 +1,11 @@
+// Created By:        Sharon Colson
+// Created Date:      11/21/2025
+// Last Modification: 12/02/2025
+
+// To run on TTU HPC:
+//    spack load graphviz
 // Run with: $(spack location -i graphviz)/bin/dot -Tsvg -o input.svg input.dot
+
 
 digraph "Pacbio Nanopore Pipeline" {
 
@@ -18,7 +25,10 @@ digraph "Pacbio Nanopore Pipeline" {
     Input_fastq [label="INPUT: genome_nanopore.fastq"]
     Input_bam   [label="INPUT: genome_pacbio.subread.bam"]
 
-    Step1_trf  [label="STEP 1: TRF
+    Step1a_trf  [label="STEP 1a: TRF
+		Script: trf.sh
+		Output: genome.fasta.2.7.7.80.10.50.2000.dat"]
+    Step1b_trf  [label="STEP 1b: TRF
 		Script: trf.sh
 		Output: genome_trf.bed"]
     Step2_edta [label="STEP 2: EDTA
@@ -38,7 +48,8 @@ digraph "Pacbio Nanopore Pipeline" {
 		Script: centromere_pipeline_pacbio.sh"]
 
     // ----- Input arrows ----
-    Input_fasta -> Step1_trf
+    Input_fasta -> Step1a_trf
+    Step1a_trf  -> Step1b_trf
     Input_fasta -> Step2_edta
     Input_fasta -> Step3_mn
     Input_fasta -> Step4_mp
@@ -47,13 +58,13 @@ digraph "Pacbio Nanopore Pipeline" {
     Input_bam   -> Step4_mp
 
     // ----- Nanopore arrows (red) -----
-    Step1_trf  -> Step5_cn [color="red"]
-    Step2_edta -> Step5_cn [color="red"]
-    Step3_mn   -> Step5_cn [color="red"]
+    Step1b_trf  -> Step5_cn [color="red"]
+    Step2_edta  -> Step5_cn [color="red"]
+    Step3_mn    -> Step5_cn [color="red"]
 
     // ----- PacBio arrows (blue) -----
-    Step1_trf  -> Step6_cp [color="blue"]
-    Step2_edta -> Step6_cp [color="blue"]
-    Step4_mp   -> Step6_cp [color="blue"]
+    Step1_trf   -> Step6_cp [color="blue"]
+    Step2_edta  -> Step6_cp [color="blue"]
+    Step4_mp    -> Step6_cp [color="blue"]
 }
 
