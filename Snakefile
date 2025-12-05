@@ -10,8 +10,6 @@
 #     snakemake --cores 12
 # Create DAG: snakemake --dag | dot -Tsvg > test.svg
 
-#from pathlib import Path
-
 configfile: "config.yaml"
 
 MATCH     = config["trf_params"]["match"]
@@ -33,7 +31,7 @@ def get_trf_fastas(wildcards):
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
 
 # Add options for the TRF parameter string
-TRF_PARAM_STRING = " ".join(str(num) for num in TRF_NUMERIC_VALUES) 
+TRF_PARAM_STRING = " ".join(str(num) for num in TRF_NUMERIC_VALUES)
 if OPTIONS:
     TRF_PARAM_STRING += f" {OPTIONS}"
 
@@ -77,13 +75,18 @@ rule trf1:
             with open(log[0], "wb") as lf:
                 if exc.output:
                     lf.write(exc.output)
+                lf.write(f"\nTRF exit code: {exc.returncode}\n".encode())
 
-            if exc.returncode == 7: #### FIXME: this is taken from the above hardcoded numbers
-                # this exit code is OK
+            # Current releases of TRF (up to 4.09.1) return an exit code of the number of TRs processed
+            # Anything less than 3 should be treated as an error code. Otherwise, this should pass
+            if exc.returncode is not None and exc.returncode >= 3:
                 pass
             else:
-                # for all others, re-raise the exception
                 raise
+
+        # Make certain that output file is created
+        if not os.path.exists(output[0]):
+            raise Exception(f"TRF did not produce expected output file: {output[0]}")
 
 rule trf2:
     input:
