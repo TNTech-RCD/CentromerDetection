@@ -2,3 +2,4 @@
 *.bed
 *.dat
 logs/
+data/
