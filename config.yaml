@@ -1,5 +1,9 @@
 samples:
-    Guy11_Final_S4: data/nanopore/Guy11_Final_S4.fasta
+    Guy11:
+        platform: nanopore
+
+nanopore_dir: data/nanopore
+pacbio_dir: data/pacbio
  
 trf_params:  # defaults are 2 7 7 80 10 50 2000 -h
     match: 2
