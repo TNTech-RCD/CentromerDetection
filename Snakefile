@@ -34,11 +34,22 @@ def get_base_dir(sample):
     elif platform == "pacbio":
         return PACBIO_DIR
     else:
-        raise ValueError(f"Unknown platform: '{platform}' for sample: '{sample}'. Please check the platform specified in your config.yaml for this sample.")
+        raise ValueError(f"Unknown platform: '{platform}' for sample: '{sample}'. "
+                          "Please check the platform specified in your config.yaml for this sample."
+                         )
+
+def get_path_with_ext(wildcards, ext):
+    base = get_base_dir(wildcards.sample)
+    return f"{base}/{wildcards.sample}.{ext}"
 
 def get_fasta(wildcards):
-    base = get_base_dir(wildcards.sample)
-    return f"{base}/{wildcards.sample}.fasta"
+    return get_path_with_ext(wildcards, "fasta")
+
+def get_gff3(wildcards):
+    return get_path_with_ext(wildcards, "gff3")
+
+def get_fastq(wildcards):
+    return get_path_with_ext(wildcards, "fastq")
 
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
@@ -55,7 +66,7 @@ rule all:
     input:
         expand("results/{sample}_trf.bed", sample=SAMPLES_LIST)
 
-rule trf1:
+rule run_trf:
     input:
         get_fasta
     output:
@@ -101,7 +112,7 @@ rule trf1:
         if not os.path.exists(output[0]):
             raise Exception(f"TRF did not produce expected output file: {output[0]}")
 
-rule trf2:
+rule convert_trf_to_bed:
     input:
         "results/{sample}.fasta" + TRF_SUFFIX
     output:
@@ -116,3 +127,12 @@ rule trf2:
             --bed {output} \
             --tool repeatseq &> {log}
         """
+
+#rule edta:
+#    input:
+#        get_fasta
+#        get_gff3
+#    output:
+#        "results/{sample}_edta.bed"
+    
+
