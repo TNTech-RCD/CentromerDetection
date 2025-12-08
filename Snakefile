@@ -21,11 +21,24 @@ MINSCORE  = config["trf_params"]["minscore"]
 MAXPERIOD = config["trf_params"]["maxperiod"]
 OPTIONS   = config["trf_params"]["options"]
 
-SAMPLE_TO_FASTA = config["samples"]
-SAMPLES_LIST = list(SAMPLE_TO_FASTA.keys())
+NANOPORE_DIR = config["nanopore_dir"]
+PACBIO_DIR = config["pacbio_dir"]
 
-def get_trf_fastas(wildcards):
-    return SAMPLE_TO_FASTA[wildcards.sample]
+SAMPLES_DICT = config["samples"]
+SAMPLES_LIST = list(SAMPLES_DICT.keys())
+
+def get_base_dir(sample):
+    platform = SAMPLES_DICT[sample]["platform"].lower()
+    if platform == "nanopore":
+        return NANOPORE_DIR
+    elif platform == "pacbio":
+        return PACBIO_DIR
+    else:
+        raise ValueError(f"Unknown platform: '{platform}' for sample: '{sample}'. Please check the platform specified in your config.yaml for this sample.")
+
+def get_fasta(wildcards):
+    base = get_base_dir(wildcards.sample)
+    return f"{base}/{wildcards.sample}.fasta"
 
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
@@ -44,7 +57,7 @@ rule all:
 
 rule trf1:
     input:
-        get_trf_fastas
+        get_fasta
     output:
         "results/{sample}.fasta" + TRF_SUFFIX
     log:
