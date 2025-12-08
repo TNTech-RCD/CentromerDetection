@@ -1,5 +1,8 @@
 .snakemake
 *.bed
 *.dat
+*.sif
 logs/
 data/
+
+spack_load.txt
