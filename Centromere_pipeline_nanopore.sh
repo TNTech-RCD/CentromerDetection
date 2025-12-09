@@ -128,9 +128,9 @@ except IndexError:
     sys.exit(1)
 
 # Standard large exclusion zone (for long chromosomes)
-EXCLUSION_BP_LARGE = 300000
+EXCLUSION_BP_LARGE = 100000
 # Minimal exclusion zone (for very short scaffolds, e.g., 100 kbp)
-EXCLUSION_BP_MIN = 50000
+EXCLUSION_BP_MIN = 10000
 WINDOW = 1000
 
 # ==============================
@@ -189,7 +189,7 @@ for chrom in df['chrom'].unique():
     df.loc[exclusion_mask, ['te_cov_n', 'gene_count_n', 'meth_diff_n']] = 0.0
 
 # Weighted scoring
-w = dict(trf=4.0, te=3.0, gene=1.0, meth=1.0, cov=0.5, gc=1.0)
+w = dict(trf=8.0, te=5.0, gene=1.0, meth=1.0, cov=0.5, gc=1.0)
 df['centro_score'] = (
     w['trf'] * df['trf_cov_n'] +
     w['te'] * df['te_cov_n'] +
@@ -205,22 +205,24 @@ df = df.sort_values(['chrom', 'start']).reset_index(drop=True)
 df.to_csv(out_prefix + "_windows_ranked.tsv", sep='\t', index=False)
 
 # ==============================
-# Candidate selection
+# Candidate selection (SIMPLIFIED)
 # ==============================
 candidates = []
 for chrom, sub in df.groupby('chrom'):
-    perfect_sub = sub[(sub['te_cov'] <= 1) & (sub['gene_count'] == 0)]
-    internal_perfect_sub = perfect_sub[~perfect_sub['is_excluded']]
+    
+    # 1. Filter out windows that are in the exclusion zones
+    internal_sub = sub[~sub['is_excluded']]
 
-    if internal_perfect_sub.empty:
-        print(f"Warning: No internal windows with zero TE/Gene found on {chrom}. Selecting best score as fallback.")
-        sel = sub.nlargest(1, 'centro_score')
-    else:
-        maxs = internal_perfect_sub['centro_score'].max()
-        thr = 0.25 * maxs
-        sel = internal_perfect_sub[internal_perfect_sub['centro_score'] >= thr]
-        if sel.empty:
-            sel = internal_perfect_sub.nlargest(1, 'centro_score')
+    if internal_sub.empty:
+        print(f"Warning: Chromosome {chrom} has no windows outside the exclusion zone. Skipping.")
+        continue
+    
+    # 2. Select the top 5 windows with the highest 'centro_score' 
+    sel = internal_sub.nlargest(5, 'centro_score')
+    
+    if sel.empty:
+        print(f"Warning: Could not select any candidates for {chrom}. Skipping.")
+        continue
 
     candidates.append(sel)
 
@@ -249,7 +251,7 @@ with open(out_prefix + "_candidates.bed", "w") as fh:
 cand_df.to_csv(out_prefix + "_candidates_ranked.tsv", sep='\t', index=False)
 
 # ==============================
-# Plotting and gene-free region identification
+# Plotting and gene-free region identification (SIMPLIFIED MINIMUM SEARCH)
 # ==============================
 plotdir = out_prefix + "_plots"
 os.makedirs(plotdir, exist_ok=True)
@@ -261,22 +263,46 @@ for chrom, g in df.groupby('chrom'):
     x = (g['start'] + g['end']) / 2 / 1000
     chrom_candidates = cand_df[cand_df['chrom'] == chrom]
 
-    if chrom_candidates.empty:
-        print(f"Skipping {chrom}: No valid centromere candidates found.")
+    # --- Identify true centromere as local minimum in the score (robust search) ---
+    sub = g.copy()
+    sub_center = (sub['start'] + sub['end']) / 2
+    internal = sub[~sub['is_excluded']].copy()
+
+    # If internal is empty, skip
+    if internal.empty:
+        print(f"Skipping {chrom}: no internal windows after exclusion.")
         continue
 
-    idx = chrom_candidates['centro_score'].idxmax()
-    if pd.isna(idx):
-        print(f"Warning: idxmax() returned NaN for {chrom}. Skipping.")
-        continue
+    # smoothing window in bp around each point (adjustable)
+    search_kb = 200  # +/- 200 kb search radius around candidate center
+    search_bp = int(search_kb * 1000)
 
-    best_window = chrom_candidates.loc[idx]
+    # convert WINDOW (bp per row) to number of rows for rolling
+    # fallback if WINDOW is not exact per-row size
+    median_step = int(np.median(internal['end'] - internal['start']))
+    step = median_step if median_step > 0 else WINDOW
+    window_n = max(3, int((2 * search_bp) / step))  # cover ~400 kb smoothing window by default
+    # ensure window_n is odd for symmetric smoothing (not required, but okay)
+    if window_n % 2 == 0:
+        window_n += 1
+
+    internal['score_smooth'] = internal['centro_score'].rolling(window_n, center=True, min_periods=1).median()
+
+    # --- REVISED: Find the single best center globally in the smoothed score ---
+    # The best position is simply the global minimum of the smoothed score series 
+    # across all non-excluded windows for this chromosome.
+    idx_glob = internal['centro_score'].idxmin()
+    best_window = internal.loc[idx_glob]
+
     best_x = (best_window['start'] + best_window['end']) / 2 / 1000
-    best_df.append(best_window)
+    best_df.append(best_window) # Correct Indentation
+
+    # The entire previous multi-candidate search and conditional logic for 'best_pos' is now removed.
 
     # --- Identify contiguous no-gene/low-TE region ---
     no_gene_region = None
     if best_x is not None:
+        # The search now centers on the globally best minimum found above
         search_start = best_window['start'] - 100000
         search_end = best_window['end'] + 100000
         sub = g[(g['start'] >= search_start) & (g['end'] <= search_end)]
@@ -337,7 +363,7 @@ if gene_free_regions:
     gene_free_df.to_csv(out_prefix + "_best_candidates.bed", sep='\t', index=False, header=False)
 else:
     print("Warning: No contiguous gene-free/low-TE regions identified.")
-
+    
 PYCODE
 
 # ==============================
