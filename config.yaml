@@ -1,6 +1,8 @@
 samples:
     Guy11:
         platform: nanopore
+    Guy11_chr1:
+        platform: nanopore
 
 nanopore_dir: data/nanopore
 pacbio_dir: data/pacbio
