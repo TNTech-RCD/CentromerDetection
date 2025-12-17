@@ -45,35 +45,27 @@ digraph "Pacbio Nanopore Pipeline" {
 		Output: genome_edta.bed"]
     Step3a_mn   [label="STEP 3a: meth_nanopore - minimap2
 		Script: meth_bed_nanopore.sh
-                Run: minimap2 -t '$THREADS' -ax map-ont -Y genome.fasta genome.fastq > genome.sam
 		Output: genome.sam"]
     Step3b_mn   [label="STEP 3b: meth_nanopore - samtools_sort
 		Script: meth_bed_nanopore.sh
-                Run: samtools sort -@ '$THREADS' -o genome_sorted.bam genome.sam
 		Output: genome_sorted.bam"]
     Step3c_mn   [label="STEP 3c: meth_nanopore - samtools_index
 		Script: meth_bed_nanopore.sh
-                Run: samtools index genome_sorted.bam
 		Output: genome_sorted.bam.bai"]
     Step3d_mn   [label="STEP 3d: meth_nanopore - modbam2bed
 		Script: meth_bed_nanopore.sh
-                Run: ./modbam2bed genome.fasta genome_sorted.bam > genome.bed
 		Output: genome_methyl.bed"]
     Step4a_mp   [label="STEP 4a: meth_pacbio - ccsmeth call reads
 		Script: ccsmeth.sh
-                Run: ccsmeth call_hifi --subreads genome.subreads.bam --threads {threads} --output genome.hifi.bam
 		Output: genome.hifi.bam"]
     Step4b_mp   [label="STEP 4b: meth_pacbio - ccsmeth align reads
 		Script: ccsmeth.sh
-                Run: ccsmeth aligh_hifi --hifireads genome.hifi.bam --ref genome.fasta  --output genome.hifi.pbmm2.bam --threads {threads}
 		Output: genome.hifi.pbmm2.bam"]
-    Step4c_mp   [label="STEP 4: meth_pacbio - ccsmeth call mods
+    Step4c_mp   [label="STEP 4c: meth_pacbio - ccsmeth call mods
 		Script: ccsmeth.sh
-                Run: CUDA_VISIBLE_DEVICES=0 ccsmeth call_mods --input genome.pbmm2.bam --ref genome.fasta --model_file {model} --output genome.pbmm2.call_mods --threads {threads} --threads_call 2 --model_type attbigru2s --mode align
 		Output: genome.hifi.pbmm2.call_mods"]
-    Step4d_mp   [label="STEP 4: meth_pacbio - ccsmeth call freqb
+    Step4d_mp   [label="STEP 4d: meth_pacbio - ccsmeth call freqb
 		Script: ccsmeth.sh
-                Run: ccsmeth call_freqb --input_bam genome.hifi.pbmm2.call_mods.modbam.bam --ref genome.fasta --output genome.hifi.pbmm2.call_mods.modbam.freq --threads {threads} --sort --bed --call_mode aggregate --aggre_model {model}
 		Output: genome.hifi.pbmm2.call_mods.modbam.freq"]
 
     // ----- Right side nodes -----
@@ -101,7 +93,7 @@ digraph "Pacbio Nanopore Pipeline" {
     Input_fasta -> Step4c_mp
     Step4b_mp   -> Step4c_mp
     Input_fasta -> Step4d_mp
-    Step4C_mp   -> Step4d_mp
+    Step4c_mp   -> Step4d_mp
 
     // ----- Nanopore arrows (red) -----
     Step1b_trf   -> Step5_cn [color="red"]
