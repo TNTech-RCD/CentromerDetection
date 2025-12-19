@@ -8,6 +8,8 @@
 #     snakemake -np
 #         OR
 #     snakemake --cores 12
+#         OR
+#     snakemake --use-conda --cores 12 results/Fo4287v4/METH_PACBIO/Fo4287v4.hifi.pbmm2.bam
 # Create DAG: snakemake --dag | dot -Tsvg > test.svg
 
 import os
@@ -54,6 +56,9 @@ def get_gff3(wildcards):
 def get_fastq(wildcards):
     return get_path_with_ext(wildcards, "fastq")
 
+def get_bam(wildcards):
+    return get_path_with_ext(wildcards, "subreads.bam")
+
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
 
@@ -69,7 +74,9 @@ rule all:
     input:
         expand("results/{sample}/TRF/{sample}_trf.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/EDTA/{sample}_edta.bed", sample=SAMPLES_LIST),
-        expand("results/{sample}/METH_NANOPORE/{sample}_methyl.bed", sample=SAMPLES_LIST)
+        expand("results/{sample}/METH_NANOPORE/{sample}_methyl.bed", sample=SAMPLES_LIST),
+#        expand("results/{sample}/METH_NANOPORE/{sample}.hifi.pbmm2.call_mods.modbam.bam", sample=SAMPLES_LIST),
+        expand("results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed", sample=SAMPLES_LIST)
 
 #### TRF ####
 rule run_trf:
@@ -310,4 +317,110 @@ rule mn_modbam2bed:
         {params.modbam2bed} {input.fasta} {input.bam} > {output.bed} 2> {log}
         """
 
+
+#### Meth Pacbio ####
+rule ccsmeth_call_hifi:
+    input:
+        bam   = get_bam
+    output:
+        bam = "results/{sample}/METH_PACBIO/{sample}.hifi.bam"
+    log:
+        "results/{sample}/METH_PACBIO/logs/ccsmeth_call_hifi_{sample}.log"
+    threads: config["cpus_per_task"]
+    conda:
+        "envs/ccsmeth.yaml"
+#        mkdir -p "$(dirname {log})"
+
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})" "$(dirname {output.bam})"
+
+        ccsmeth call_hifi \
+           --subreads {input.bam} \
+           --threads {threads} \
+           --output {output.bam} &> {log}
+        """
+
+rule ccsmeth_align_reads:
+    input:
+        fasta = get_fasta,
+        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.bam"
+    output:
+        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
+    log:
+        "results/{sample}/METH_PACBIO/logs/ccsmeth_align_reads_{sample}.log"
+    threads: config["cpus_per_task"]
+    conda:
+        "envs/ccsmeth.yaml"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        ccsmeth align_hifi \
+           --hifireads {input.bam} \
+           --ref {input.fasta} \
+           --output {output.bam} \
+           --threads {threads} &> {log}
+        """
+
+rule ccsmeth_call_mods:
+    input:
+        fasta = get_fasta,
+        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.bam"
+
+    output:
+        "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.bam"
+    log:
+        "results/{sample}/METH_PACBIO/logs/ccsmeth_call_mods_{sample}.log"
+    params:
+        model_file = config["ccsmeth"]["call_mod"]["model_file"],
+        threads_call = config["ccsmeth"]["call_mod"]["threads_call"],
+        model_type = config["ccsmeth"]["call_mod"]["model_type"],
+        mode = config["ccsmeth"]["call_mod"]["mode"],
+        out_prefix = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods"
+    threads: config["cpus_per_task"]
+#    conda:
+#        "envs/ccsmeth.yaml"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        ccsmeth call_mods --input {input.bam} \
+            --ref {input.fasta} \
+            --model_file {params.model_file} \
+            --output {params.out_prefix} \
+            --threads {threads} \
+            --threads_call {params.threads_call} \
+            --model_type {params.model_type} \
+            --mode {params.mode} &> {log}
+        """
+
+rule ccsmeth_call_freqb:
+    input:
+        fasta = get_fasta,
+        bam   = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.bam"
+    output:
+        "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed"
+    log:
+        "results/{sample}/METH_PACBIO/logs/ccsmeth_call_freqb_{sample}.log"
+    params:
+        model_file = config["ccsmeth"]["call_freqb"]["model_file"],
+        call_mode = config["ccsmeth"]["call_freqb"]["call_mode"],
+        out_prefix = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq"
+    threads: config["cpus_per_task"]
+#    conda:
+#        "envs/ccsmeth.yaml"
+    shell:
+        r"""
+        mkdir -p "$(dirname {log})"
+
+        ccsmeth call_freqb \
+            --input_bam {input.bam} \
+            --ref {input.fasta} \
+            --output {params.out_prefix} \
+            --threads {threads} \
+            --sort --bed \
+            --call_mode {params.call_mode} \
+            --aggre_model {params.model_file} &> {log}
+        """
 
