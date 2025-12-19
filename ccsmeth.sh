@@ -20,7 +20,7 @@ virtualenv kineticTools_env
 . kineticTools_env/bin/activate
 
 # 1. call hifi reads with kinetics if needed
- should have added pbccs to $PATH or the used environment
+# should have added pbccs to $PATH or the used environment
 ccsmeth call_hifi --subreads ${WORKDIR}/${input_1}.subreads.bam \
   --threads ${SLURM_CPUS_PER_TASK} \
   --output ${input_1}.hifi.bam
@@ -66,14 +66,3 @@ ccsmeth call_freqb \
   --threads ${SLURM_CPUS_PER_TASK} --sort --bed \
   --call_mode aggregate \
   --aggre_model /home/tntech.edu/ssalimi42/work/Thesis_Finall/ccsmeth/models/model_ccsmeth_5mCpG_aggregate_attbigru_b11.v2p.ckpt
-  
-  
-  
-
-
-
-
-
-  
-  
-  
