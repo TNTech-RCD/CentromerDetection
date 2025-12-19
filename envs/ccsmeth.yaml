@@ -1,0 +1,14 @@
+name: ccsmeth_env
+channels:
+#  - pytorch
+#  - nvidia
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - ccsmeth
+  - pbccs
+  - python=3.10
+  - numpy
+#  - pytorch=2.0
+#  - pytorch-cuda
