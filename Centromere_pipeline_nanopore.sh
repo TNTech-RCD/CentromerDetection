@@ -303,8 +303,8 @@ for chrom, g in df.groupby('chrom'):
     no_gene_region = None
     if best_x is not None:
         # The search now centers on the globally best minimum found above
-        search_start = best_window['start'] - 100000
-        search_end = best_window['end'] + 100000
+        search_start = best_window['start'] - 150000
+        search_end = best_window['end'] + 150000
         sub = g[(g['start'] >= search_start) & (g['end'] <= search_end)]
         no_gene_strict = sub[(sub['gene_count'] == 0) & (sub['te_cov'] <= 5)].sort_values('start')
 
@@ -363,7 +363,7 @@ if gene_free_regions:
     gene_free_df.to_csv(out_prefix + "_best_candidates.bed", sep='\t', index=False, header=False)
 else:
     print("Warning: No contiguous gene-free/low-TE regions identified.")
-    
+
 PYCODE
 
 # ==============================
