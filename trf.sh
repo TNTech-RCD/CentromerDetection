@@ -12,13 +12,13 @@ input_1=$1 #specific region sequence like FoTeR element as fasta format
 #input_2=$3 # full name of input_1
 
 
-#trf $input_1 2 7 10 80 10 50 100 
+#trf $input_1 2 7 10 80 10 50 100
 trf $input_1.fasta 2 7 7 80 10 50 2000 -h
 
 #~/.local/bin/trf2gff  -o ${input_1}_trf.gff < ${input_1}.fasta.2.7.7.80.10.50.2000.dat #set up this #.2.7.10.80.10.50.100.dat# based on trf's input
 #Final_FoTeR_5176.fasta.2.7.10.80.10.50.100.dat
 
-python3 /home/tntech.edu/ssalimi42/work/Thesis_Finall/sterategy_2/centromere/trf2bed.py \
+python3 trf2bed.py \
        --dat ${input_1}.fasta.2.7.7.80.10.50.2000.dat \
        --bed ${input_1}_trf.bed \
        --tool repeatseq

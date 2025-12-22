@@ -7,8 +7,8 @@ def parse_args():
 	parser.add_argument('--dat', type=str, required=True, help='Input dat file produced by Tandem Repeat Finder (TRF) using the -d option.')
 	parser.add_argument('--bed', type=str, required=True, help='Output bed file based on Tandem Repeat Finder (TRF) data.')
 	parser.add_argument('--tool', type=str, required=True, choices=['lobstr', 'gangstr', 'hipstr', 'repeatseq', 'gatk'], help='Name of the tool for what the file bed file will be generated.')
-	
-	return parser.parse_args() 
+
+	return parser.parse_args()
 
 def main():
 	args = parse_args()
@@ -16,9 +16,12 @@ def main():
 	bedfile = args.bed
 	toolname = args.tool
 
+
 	with open(bedfile, 'w') as bed:
+		print("Writing bed file.")
 		chrom = ""
 		with open(datfile, 'r') as dat:
+			print("Writing dat file.")
 			for line in dat:
 				splitline = line.split()
 				if line.startswith("Sequence:"):
@@ -42,7 +45,7 @@ def main():
 
 						elif toolname == 'gangstr':
 							bed.write('\t'.join([chrom, start, end, motif_length, motif]) + '\n') # for GangSTR
-		
+
 						elif toolname == 'hipstr':
 							bed.write('\t'.join([chrom, start, end, motif_length, reference_length]) + '\n') # for HipSTR
 
@@ -54,9 +57,12 @@ def main():
 
 						else:
 							print("Tool not specified")
+							print("Unable to write files.")
 
 					except IndexError:
 						pass
+			print("Dat file creation successful.")
+		print("Bed file creation successful.")
 
 if __name__ == '__main__':
 	main()

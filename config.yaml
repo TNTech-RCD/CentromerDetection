@@ -1,0 +1,56 @@
+samples:
+    Guy11:
+        platform: nanopore
+    Guy11_chr1:
+        platform: nanopore
+    Fo4287v4:
+        platform: pacbio
+
+nanopore_dir: data/nanopore
+pacbio_dir: data/pacbio
+
+# Specific to TRF steps 
+trf_params:  # defaults are 2 7 7 80 10 50 2000 -h
+    match: 2
+    mismatch: 7
+    delta: 7
+    pm: 80
+    pi: 10
+    minscore: 50
+    maxperiod: 2000
+    options: -h
+
+cpus_per_task: 12
+    
+# Singularity + EDTA
+container:
+  binary: singularity
+  binds:
+    - /usr/bin/which
+    - /work
+    - $(spack location -i ncbi-rmblastn):/rmblast
+  env:
+    PATH: /usr/local/bin:$PATH
+
+edta:
+  sif: /work/projects/its/scolson/biology/sahar_software_pipeline/CentromerDetection/edta2.sif
+  species: others
+  overwrite: 1
+  sensitive: 1
+  anno: 1
+  force: 1
+
+# Meth Nanopore
+modbam2bed: "/work/projects/its/scolson/biology/sahar_software_pipeline/modbam2bed/modbam2bed"
+
+# Meth Pacbio
+ccsmeth:
+    call_mod:
+        model_file: "../models/model_ccsmeth_5mCpG_call_mods_attbigru2s_b21.v3.ckpt"
+        model_type: attbigru2s
+        mode: align
+        threads_call: 2
+
+    call_freqb:
+        call_mode: aggregate
+        model_file: "../models/model_ccsmeth_5mCpG_aggregate_attbigru_b11.v2p.ckpt"

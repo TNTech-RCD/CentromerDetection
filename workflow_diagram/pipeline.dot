@@ -1,0 +1,66 @@
+// Run with: $(spack location -i graphviz)/bin/neato -Tsvg -o pipeline.svg pipeline.dot
+
+digraph "Pacbio Nanopore Pipeline" {
+
+    // ---- Layout ----
+    layout=neato
+    overlap=false
+    splines=true
+
+    // ----- Title -----
+    label="Pacbio Nanopore Pipeline"
+    labelloc="t"
+    labeljust="c"
+    fontsize=40         
+
+    node [shape=box fontsize=20]
+
+    // ----- Left side nodes -----
+    Step1_trf  [label="STEP 1: TRF
+
+		Input: genome.fasta
+		Script: trf.sh
+		Output: genome_trf.bed",
+                pos="0,6!"]
+    Step2_edta [label="STEP 2: EDTA
+
+		Input: genome.fasta, genome.gff3
+		Script: edta.sh
+		Output: genome_edta.bed",
+                pos="0,4!"]
+    Step3_mn   [label="STEP 3: meth_nanopore
+
+		Input: genome.fasta, genome_nanopore.fastq
+		Script: meth_bed_nanopore.sh
+		Output: genome_meth.bed, fenome_nano_sorted.bam, genome_nano_sorted.bam.bai",
+                pos="0,2!"]
+    Step4_mp   [label="STEP 4: meth_pacbio
+
+		Input: genome.fasta, genome_pacbio.subreab.bam
+		Script: ccsmeth.sh
+		Output: genome_meth.bed, genome_pacbio_sorted.bam, genome_pacbio_sorted.bam.bai",
+                pos="0,0!"]
+
+    // ----- Right side nodes -----
+    Step5_cn   [label="STEP 5: centromere_nanopore
+
+		Input: Output from Steps 1, 2, and 3
+		Script: centromere_pipeline_nanopore.sh",
+                pos="8,5!"]
+    Step6_cp   [label="STEP 6: centromere_pacbio
+
+		Input: Output from Steps 1, 2, and 4
+		Script: centromere_pipeline_pacbio.sh",
+                pos="8,1.75!"]
+
+    // ----- Nanopore arrows (red) -----
+    Step1_trf  -> Step5_cn [color="red"]
+    Step2_edta -> Step5_cn [color="red"]
+    Step3_mn   -> Step5_cn [color="red"]
+
+    // ----- PacBio arrows (blue) -----
+    Step1_trf  -> Step6_cp [color="blue"]
+    Step2_edta -> Step6_cp [color="blue"]
+    Step4_mp   -> Step6_cp [color="blue"]
+}
+

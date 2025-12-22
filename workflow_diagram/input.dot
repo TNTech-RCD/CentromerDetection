@@ -1,0 +1,108 @@
+// Created By:        Sharon Colson
+// Created Date:      11/21/2025
+// Last Modification: 12/02/2025
+
+// To run on TTU HPC:
+//    spack load graphviz
+// Run with: $(spack location -i graphviz)/bin/dot -Tsvg -o input.svg input.dot
+
+
+digraph "Pacbio Nanopore Pipeline" {
+
+    overlap=false
+
+    // ----- Title -----
+    label="Pacbio Nanopore Pipeline"
+    labelloc="t"
+    labeljust="c"
+    fontsize=40         
+
+    node [shape=box fontsize=20]
+
+    // ----- Left side nodes -----
+    Input_fasta [label="INPUT: genome.fasta"]
+    Input_gff3  [label="INPUT: genome.gff3"]
+    Input_fastq [label="INPUT: genome_nanopore.fastq"]
+    Input_bam   [label="INPUT: genome_pacbio.subread.bam"]
+
+    Step1a_trf  [label="STEP 1a: TRF - process genome and create dat file
+		Script: trf.sh
+		Output: genome.fasta.2.7.7.80.10.50.2000.dat"]
+    Step1b_trf  [label="STEP 1b: TRF - convert to bed file
+		Script: trf.sh
+		Output: genome_trf.bed"]
+    Step2a_edta [label="STEP 2a: EDTA - get cds
+		Script: edta.sh
+		Output: genome_cds.fasta"]
+    Step2b_edta [label="STEP 2b: EDTA - gff2bed
+		Script: edta.sh
+		Output: genome.bed"]
+    Step2c_edta [label="STEP 2c: EDTA - annotate TEs
+		Script: edta.sh
+		Output: genome.fasta.mod.EDTA.TEanno.gffs"]
+    Step2d_edta [label="STEP 2d: EDTA - convert to bed
+		Script: edta.sh
+		Output: genome_edta.bed"]
+    Step3a_mn   [label="STEP 3a: meth_nanopore - minimap2
+		Script: meth_bed_nanopore.sh
+		Output: genome.sam"]
+    Step3b_mn   [label="STEP 3b: meth_nanopore - samtools_sort
+		Script: meth_bed_nanopore.sh
+		Output: genome_sorted.bam"]
+    Step3c_mn   [label="STEP 3c: meth_nanopore - samtools_index
+		Script: meth_bed_nanopore.sh
+		Output: genome_sorted.bam.bai"]
+    Step3d_mn   [label="STEP 3d: meth_nanopore - modbam2bed
+		Script: meth_bed_nanopore.sh
+		Output: genome_methyl.bed"]
+    Step4a_mp   [label="STEP 4a: meth_pacbio - ccsmeth call reads
+		Script: ccsmeth.sh
+		Output: genome.hifi.bam"]
+    Step4b_mp   [label="STEP 4b: meth_pacbio - ccsmeth align reads
+		Script: ccsmeth.sh
+		Output: genome.hifi.pbmm2.bam"]
+    Step4c_mp   [label="STEP 4c: meth_pacbio - ccsmeth call mods
+		Script: ccsmeth.sh
+		Output: genome.hifi.pbmm2.call_mods"]
+    Step4d_mp   [label="STEP 4d: meth_pacbio - ccsmeth call freqb
+		Script: ccsmeth.sh
+		Output: genome.hifi.pbmm2.call_mods.modbam.freq"]
+
+    // ----- Right side nodes -----
+    Step5_cn   [label="STEP 5: centromere_nanopore
+		Script: centromere_pipeline_nanopore.sh"]
+    Step6_cp   [label="STEP 6: centromere_pacbio
+		Script: centromere_pipeline_pacbio.sh"]
+
+    // ----- Input arrows ----
+    Input_fasta -> Step1a_trf
+    Step1a_trf  -> Step1b_trf
+    Input_fasta -> Step2a_edta
+    Step2a_edta -> Step2c_edta
+    Step2b_edta -> Step2c_edta
+    Step2c_edta -> Step2d_edta
+    Input_fasta -> Step3a_mn
+    Input_gff3  -> Step2a_edta
+    Input_fastq -> Step3a_mn
+    Step3a_mn   -> Step3b_mn
+    Step3b_mn   -> Step3c_mn
+    Step3c_mn   -> Step3d_mn
+    Input_bam   -> Step4a_mp
+    Input_fasta -> Step4b_mp
+    Step4a_mp   -> Step4b_mp
+    Input_fasta -> Step4c_mp
+    Step4b_mp   -> Step4c_mp
+    Input_fasta -> Step4d_mp
+    Step4c_mp   -> Step4d_mp
+
+    // ----- Nanopore arrows (red) -----
+    Step1b_trf   -> Step5_cn [color="red"]
+    Step2d_edta  -> Step5_cn [color="red"]
+    Step3d_mn    -> Step5_cn [color="red"]
+
+    // ----- PacBio arrows (blue) -----
+    Step1b_trf    -> Step6_cp [color="blue"]
+    Step2d_edta   -> Step6_cp [color="blue"]
+    Step4d_mp     -> Step6_cp [color="blue"]
+}
+

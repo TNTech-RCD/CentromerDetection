@@ -1,0 +1,13 @@
+.snakemake
+*.bed
+*.dat
+*.sif
+*.svg
+logs/
+data/
+results/
+
+spack_load.txt
+todo.txt
+run.sh
+slurm-*.out
