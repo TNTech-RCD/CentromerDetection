@@ -329,11 +329,9 @@ rule ccsmeth_call_hifi:
     threads: config["cpus_per_task"]
     conda:
         "envs/ccsmeth.yaml"
-#        mkdir -p "$(dirname {log})"
-
     shell:
         r"""
-        mkdir -p "$(dirname {log})" "$(dirname {output.bam})"
+        mkdir -p "$(dirname {log})"
 
         ccsmeth call_hifi \
            --subreads {input.bam} \
@@ -379,8 +377,6 @@ rule ccsmeth_call_mods:
         mode = config["ccsmeth"]["call_mod"]["mode"],
         out_prefix = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods"
     threads: config["cpus_per_task"]
-#    conda:
-#        "envs/ccsmeth.yaml"
     shell:
         r"""
         mkdir -p "$(dirname {log})"
@@ -408,8 +404,6 @@ rule ccsmeth_call_freqb:
         call_mode = config["ccsmeth"]["call_freqb"]["call_mode"],
         out_prefix = "results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq"
     threads: config["cpus_per_task"]
-#    conda:
-#        "envs/ccsmeth.yaml"
     shell:
         r"""
         mkdir -p "$(dirname {log})"
