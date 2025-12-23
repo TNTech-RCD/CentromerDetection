@@ -442,7 +442,7 @@ rule centromere_scoring_index_fai:
         cp {input.fasta}.fai {output.fai} &> {log}
         """
 
-rule centromere_scoring_make_windows_pacbio:
+rule centromere_scoring_make_windows:
     input:
         fai = rules.centromere_scoring_index_fai.output.fai
     output:
