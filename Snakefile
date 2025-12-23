@@ -32,6 +32,8 @@ PACBIO_DIR   = config["pacbio_dir"]
 SAMPLES_DICT = config["samples"]
 SAMPLES_LIST = list(SAMPLES_DICT.keys())
 
+WINDOW = config["window"]
+
 def get_base_dir(sample):
     platform = SAMPLES_DICT[sample]["platform"].lower()
     if platform == "nanopore":
@@ -59,6 +61,9 @@ def get_fastq(wildcards):
 def get_bam(wildcards):
     return get_path_with_ext(wildcards, "subreads.bam")
 
+def is_nanopore(sample):
+    return SAMPLES_DICT[sample]["platform"].lower() == "nanopore"
+
 # Order for TRF and filename suffix
 TRF_NUMERIC_VALUES = [MATCH, MISMATCH, DELTA, PM, PI, MINSCORE, MAXPERIOD]
 
@@ -77,7 +82,8 @@ rule all:
         expand("results/{sample}/METH_NANOPORE/{sample}_methyl.bed", sample=SAMPLES_LIST),
         expand("results/{sample}/METH_PACBIO/{sample}.hifi.pbmm2.call_mods.modbam.freq.aggregate.all.bed", sample=SAMPLES_LIST),
         # Centromere Scoring Notes
-        expand("resultsa/{sample}/CENTROMERE_SCORING/{sample}.fasta.fai", sample=SAMPLES_LIST)
+#        expand("results/{sample}/CENTROMERE_SCORING/{sample}.fasta.fai", sample=SAMPLES_LIST)
+        expand("results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed", sample=SAMPLES_LIST, window=WINDOW)
 
 #### TRF ####
 rule run_trf:
@@ -433,5 +439,27 @@ rule centromere_scoring_index_fai:
 
         samtools faidx {input.fasta}
 
-        mv {input.fasta}.fai {output.fai} &> {log}
+        cp {input.fasta}.fai {output.fai} &> {log}
+        """
+
+rule centromere_scoring_make_windows_pacbio:
+    input:
+        fai = rules.centromere_scoring_index_fai.output.fai
+    output:
+        bed = "results/{sample}/CENTROMERE_SCORING/windows.{sample}.{window}bp.bed"
+    log:
+        "results/{sample}/CENTROMERE_SCORING/{sample}_window_{window}.log"
+    params:
+        window = config["window"],
+        do_sort = lambda wildcard: "true" if is_nanopore(wildcard.sample) else "false"
+    shell:
+        r"""
+        mkdir -p "$(dirname {output.bed}) "$(dirname {log})""
+
+        if [ "{params.do_sort}" = "true" ]; then
+            bedtools makewindows -g {input.fai} -w {params.window} \
+              | sort -k1,1V -k2,2n > {output.bed} &> {log}
+        else
+            bedtools makewindows -g {input.fai} -w {params.window} > {output.bed} &> {log}
+        fi
         """
